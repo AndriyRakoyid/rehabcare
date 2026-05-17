@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8"/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f2ed;
+  --card:#ffffff;
+  --green:#1a6b4a;
+  --green-light:#e8f5ef;
+  --green-mid:#2d9b6a;
+  --text:#1a1a1a;
+  --muted:#6b7280;
+  --border:#e0dbd3;
+  --err:#c0392b;
+  --shadow:0 20px 60px rgba(26,107,74,.12),0 2px 8px rgba(0,0,0,.06);
+}
+body{
+  min-height:100vh;
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  position:relative;
+  overflow:hidden;
+}
+/* декоративний фон */
+body::before{
+  content:'';
+  position:fixed;
+  top:-40%;right:-20%;
+  width:600px;height:600px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(26,107,74,.08) 0%,transparent 70%);
+  pointer-events:none;
+}
+body::after{
+  content:'';
+  position:fixed;
+  bottom:-30%;left:-15%;
+  width:500px;height:500px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(45,155,106,.06) 0%,transparent 70%);
+  pointer-events:none;
+}
+
+.wrap{
+  display:flex;
+  width:100%;
+  max-width:900px;
+  min-height:560px;
+  box-shadow:var(--shadow);
+  border-radius:24px;
+  overflow:hidden;
+  animation:fadeUp .6s ease both;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+
+/* ліва панель */
+.side{
+  width:42%;
+  background:var(--green);
+  padding:48px 40px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  position:relative;
+  overflow:hidden;
+}
+.side::before{
+  content:'';
+  position:absolute;
+  top:-80px;right:-80px;
+  width:260px;height:260px;
+  border-radius:50%;
+  background:rgba(255,255,255,.06);
+}
+.side::after{
+  content:'';
+  position:absolute;
+  bottom:-60px;left:-40px;
+  width:200px;height:200px;
+  border-radius:50%;
+  background:rgba(255,255,255,.04);
+}
+.logo{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  z-index:1;
+}
+.logo-icon{
+  width:38px;height:38px;
+  background:rgba(255,255,255,.15);
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+}
+.logo-icon svg{stroke:white;fill:none;width:20px;height:20px;}
+.logo-text{
+  font-family:'Fraunces',serif;
+  font-weight:600;
+  font-size:1.2rem;
+  color:white;
+  letter-spacing:-.02em;
+}
+.side-body{z-index:1;}
+.side-title{
+  font-family:'Fraunces',serif;
+  font-weight:300;
+  font-style:italic;
+  font-size:2rem;
+  color:white;
+  line-height:1.25;
+  margin-bottom:16px;
+}
+.side-sub{
+  font-size:.875rem;
+  color:rgba(255,255,255,.7);
+  line-height:1.6;
+}
+.side-dots{
+  display:flex;gap:8px;z-index:1;
+}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);}
+.dot.active{background:white;width:24px;border-radius:4px;}
+
+/* права панель */
+.panel{
+  flex:1;
+  background:var(--card);
+  padding:48px 44px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.tabs{
+  display:flex;
+  gap:0;
+  background:var(--bg);
+  border-radius:12px;
+  padding:4px;
+  margin-bottom:36px;
+  width:fit-content;
+}
+.tab{
+  padding:8px 24px;
+  border:none;
+  background:transparent;
+  border-radius:9px;
+  font-family:'DM Sans',sans-serif;
+  font-size:.875rem;
+  font-weight:500;
+  color:var(--muted);
+  cursor:pointer;
+  transition:all .2s;
+}
+.tab.active{
+  background:white;
+  color:var(--green);
+  box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+.form-title{
+  font-family:'Fraunces',serif;
+  font-weight:600;
+  font-size:1.6rem;
+  color:var(--text);
+  letter-spacing:-.03em;
+  margin-bottom:6px;
+}
+.form-sub{
+  font-size:.875rem;
+  color:var(--muted);
+  margin-bottom:28px;
+}
+.field{margin-bottom:18px;}
+.field label{
+  display:block;
+  font-size:.8rem;
+  font-weight:500;
+  color:var(--text);
+  margin-bottom:6px;
+  letter-spacing:.02em;
+  text-transform:uppercase;
+}
+.field input,.field select{
+  width:100%;
+  padding:12px 16px;
+  border:1.5px solid var(--border);
+  border-radius:10px;
+  font-family:'DM Sans',sans-serif;
+  font-size:.95rem;
+  color:var(--text);
+  background:white;
+  outline:none;
+  transition:border-color .2s,box-shadow .2s;
+  appearance:none;
+}
+.field input:focus,.field select:focus{
+  border-color:var(--green);
+  box-shadow:0 0 0 3px rgba(26,107,74,.08);
+}
+.field input::placeholder{color:#b0b0b8;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.btn{
+  width:100%;
+  padding:14px;
+  background:var(--green);
+  color:white;
+  border:none;
+  border-radius:10px;
+  font-family:'DM Sans',sans-serif;
+  font-size:1rem;
+  font-weight:500;
+  cursor:pointer;
+  margin-top:6px;
+  transition:background .2s,transform .1s,box-shadow .2s;
+  letter-spacing:.01em;
+}
+.btn:hover{background:var(--green-mid);box-shadow:0 4px 20px rgba(26,107,74,.25);}
+.btn:active{transform:scale(.99);}
+.divider{
+  display:flex;align-items:center;gap:12px;
+  margin:20px 0;
+  color:var(--muted);font-size:.8rem;
+}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.invite-note{
+  background:var(--green-light);
+  border:1px solid rgba(26,107,74,.15);
+  border-radius:10px;
+  padding:12px 16px;
+  font-size:.82rem;
+  color:var(--green);
+  display:flex;align-items:center;gap:8px;
+  margin-bottom:20px;
+}
+.hidden{display:none!important;}
+
+/* ===== JS-логіка ===== */
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="wrap">
+  <!-- ліва панель -->
+  <div class="side">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" stroke-width="2">
+          <path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/>
+          <path d="M9 9h6M12 6v6"/>
+        </svg>
+      </div>
+      <span class="logo-text">RehabCare</span>
+    </div>
+
+    <div class="side-body">
+      <div class="side-title">Платформа для відновлення здоров'я</div>
+      <div class="side-sub">Відстежуйте прогрес реабілітації, аналізуйте показники та взаємодійте з лікарем в одному місці.</div>
+    </div>
+
+    <div class="side-dots">
+      <div class="dot active"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+  </div>
+
+  <!-- права панель -->
+  <div class="panel">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('login')">Вхід</button>
+      <button class="tab" onclick="showTab('register')">Реєстрація</button>
+    </div>
+
+    <!-- форма входу -->
+    <div id="login-form">
+      <div class="form-title">Добрий день 👋</div>
+      <div class="form-sub">Введіть дані для входу в систему</div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" placeholder="your@email.com"/>
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input type="password" placeholder="••••••••"/>
+      </div>
+      <button class="btn">Увійти</button>
+    </div>
+
+    <!-- форма реєстрації -->
+    <div id="register-form" class="hidden">
+      <div class="form-title">Створити акаунт</div>
+      <div class="form-sub">Реєстрація можлива лише за запрошенням</div>
+      <div class="invite-note">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+        Введіть токен із запрошення від лікаря або адміністратора
+      </div>
+      <div class="field">
+        <label>Токен запрошення</label>
+         <input id="registerToken" type="text" placeholder="xxxxxxxxxxxxxxxx"/>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Ім'я</label>
+          <input id="registerFirstName" type="text" placeholder="Іван"/>
+        </div>
+        <div class="field">
+          <label>Прізвище</label>
+          <input id="registerLastName" type="text" placeholder="Петренко"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" placeholder="your@email.com"/>
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input type="password" placeholder="мінімум 8 символів"/>
+      </div>
+      <button class="btn">Зареєструватись</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// 1. ВИПРАВЛЕННЯ: Використовуємо іншу назву змінної, щоб Safari не сварився
+// ============================================================
+// ПІДКЛЮЧЕННЯ ДО SUPABASE (ВИПРАВЛЕНО)
+// ============================================================
+const SUPABASE_URL = 'https://knzhfxpwwarrpdeqabwo.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_bWfuX9a_BzECFgmpDNDy3Q_iEzd8mjG';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Змінні для полів
+let loginEmailInput, loginPasswordInput, loginButton;
+let regTokenInput, regFirstNameInput, regLastNameInput, regEmailInput, regPasswordInput, regButton;
+
+function showTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'register' && i === 1));
+  });
+  document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
+}
+
+function showMessage(msg, isError = false) {
+  const oldMsg = document.querySelector('.form-message');
+  if (oldMsg) oldMsg.remove();
+  
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'form-message';
+  msgDiv.textContent = msg;
+  msgDiv.style.cssText = `font-size:0.85rem;padding:10px 12px;border-radius:10px;margin-top:16px;background:${isError?'#fee2e2':'#e8f5ef'};color:${isError?'#c0392b':'#1a6b4a'};border-left:3px solid ${isError?'#c0392b':'#1a6b4a'};`;
+  
+  const parent = document.querySelector(isError ? '#login-form' : '#register-form');
+  parent.appendChild(msgDiv);
+  setTimeout(() => msgDiv.remove(), 4000);
+}
+
+// ФУНКЦІЯ ВХОДУ
+async function handleLogin() {
+  console.log("Спроба входу...");
+  const email = loginEmailInput.value.trim();
+  const password = loginPasswordInput.value;
+  
+  if (!email || !password) {
+    showMessage('Будь ласка, заповніть всі поля', true);
+    return;
+  }
+  
+  loginButton.disabled = true;
+  loginButton.textContent = 'Вхід...';
+  
+  // Використовуємо 'sb' замість 'supabase'
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  
+  if (error) {
+    loginButton.disabled = false;
+    loginButton.textContent = 'Увійти';
+    showMessage(error.message, true);
+    return;
+  }
+  
+const { data: profile, error: profileError } = await sb
+  .from('profiles')
+  .select('role')
+  .eq('id', data.user.id)
+  .single();
+
+console.log('Profile:', profile);
+console.log('Profile Error:', profileError);
+
+if (profileError) {
+  showMessage(profileError.message, true);
+  loginButton.disabled = false;
+  loginButton.textContent = 'Увійти';
+  return;
+}
+if (profileError) {
+  showMessage(profileError.message, true);
+  loginButton.disabled = false;
+  loginButton.textContent = 'Увійти';
+  return;
+}
+
+// РЕДІРЕКТ ПО РОЛІ
+if (profile.role === 'patient') {
+  window.location.href = 'dashboard-patient.html';
+}
+else if (profile.role === 'doctor') {
+  window.location.href = 'dashboard-doctor.html';
+}
+else if (profile.role === 'admin') {
+  window.location.href = 'dashboard-admin.html';
+}
+else {
+  showMessage('Невідома роль користувача', true);
+  loginButton.disabled = false;
+  loginButton.textContent = 'Увійти';
+}
+}
+
+// ФУНКЦІЯ РЕЄСТРАЦІЇ
+async function handleRegister() {
+  console.log("Спроба реєстрації...");
+
+  const token = regTokenInput.value.trim();
+  const firstName = regFirstNameInput.value.trim();
+  const lastName = regLastNameInput.value.trim();
+  const email = regEmailInput.value.trim();
+  const password = regPasswordInput.value;
+
+  if (!token || !firstName || !lastName || !email || !password) {
+    showMessage('Заповніть всі поля', true);
+    return;
+  }
+
+  // 1. Перевірка токена
+  const { data: invitation, error: inviteError } = await sb
+    .from('invitations')
+    .select('*')
+    .eq('token', token)
+    .single();
+
+  console.log("STEP 1", invitation, inviteError);
+
+  if (inviteError || !invitation) {
+    showMessage('Невірний токен запрошення', true);
+    return;
+  }
+
+  // 2. Signup
+  const { data: signUpData, error: signUpError } = await sb.auth.signUp({
+    email,
+    password
+  });
+
+  console.log("STEP 2", signUpData, signUpError);
+
+  if (signUpError) {
+    showMessage(signUpError.message, true);
+    return;
+  }
+
+  // 3. Беремо ID щойно створеного користувача
+  
+  const realPatientId = signUpData.user.id;
+
+  console.log("REAL PATIENT ID:", realPatientId);
+
+  // 4. Створити profile
+const { error: profileError } = await sb
+  .from('profiles')
+  .insert({
+    id: realPatientId,
+    role: 'patient',
+    full_name: `${firstName} ${lastName}`,
+    email: email
+  });
+
+console.log("PROFILE ERROR:", profileError);
+
+if (profileError) {
+  showMessage(profileError.message, true);
+  return;
+}
+  // 5. Створити doctor_patient зв'язок
+  const { error: linkError } = await sb
+    .from('doctor_patient')
+    .insert({
+      doctor_id: invitation.invited_by,
+      patient_id: realPatientId
+    });
+
+  console.log("STEP 4", linkError);
+
+  if (linkError) {
+    showMessage(linkError.message, true);
+    return;
+  }
+
+  showMessage('Реєстрація успішна!');
+  window.location.href = 'dashboard-patient.html';
+}
+// ІНІЦІАЛІЗАЦІЯ
+document.addEventListener('DOMContentLoaded', () => {
+  console.log("DOM завантажено, прив'язуємо кнопки");
+
+  // Отримуємо елементи
+  loginEmailInput = document.querySelector('#login-form input[type="email"]');
+  loginPasswordInput = document.querySelector('#login-form input[type="password"]');
+  loginButton = document.querySelector('#login-form .btn');
+  
+  regEmailInput = document.querySelector('#register-form input[type="email"]');
+  regPasswordInput = document.querySelector('#register-form input[type="password"]');
+  regButton = document.querySelector('#register-form .btn');
+  regTokenInput = document.getElementById('registerToken');
+  regFirstNameInput = document.getElementById('registerFirstName');
+  regLastNameInput = document.getElementById('registerLastName');
+
+  // ПРИВ'ЯЗКА ПОДІЙ
+  if (loginButton) {
+    loginButton.onclick = (e) => {
+      e.preventDefault();
+      handleLogin();
+    };
+  }
+
+  if (regButton) {
+    regButton.onclick = (e) => {
+      e.preventDefault();
+      handleRegister();
+    };
+  }
+});
+
+window.showTab = showTab;
+</script>
+</body>
+</html>

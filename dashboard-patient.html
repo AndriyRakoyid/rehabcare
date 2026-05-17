@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RehabCare — Дашборд пацієнта</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f2ed;
+  --card:#ffffff;
+  --green:#1a6b4a;
+  --green-light:#e8f5ef;
+  --green-mid:#2d9b6a;
+  --text:#1a1a1a;
+  --muted:#6b7280;
+  --border:#e0dbd3;
+  --err:#c0392b;
+  --err-light:#fee2e2;
+  --amber:#d97706;
+  --amber-light:#fef3c7;
+  --shadow:0 20px 60px rgba(26,107,74,.12),0 2px 8px rgba(0,0,0,.06);
+  --shadow-sm:0 2px 8px rgba(0,0,0,.06);
+}
+
+/* ── LAYOUT ── */
+body{
+  min-height:100vh;
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  position:relative;
+}
+body::before{
+  content:'';
+  position:fixed;
+  top:-30%;right:-10%;
+  width:500px;height:500px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(26,107,74,.06) 0%,transparent 70%);
+  pointer-events:none;z-index:0;
+}
+
+/* ── TOPBAR ── */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(255,255,255,.85);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  padding:0 32px;
+  height:60px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.topbar-logo{
+  display:flex;align-items:center;gap:10px;
+  font-family:'Fraunces',serif;font-weight:600;font-size:1.1rem;color:var(--green);
+}
+.topbar-logo-icon{
+  width:32px;height:32px;background:var(--green);border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+}
+.topbar-logo-icon svg{stroke:#fff;fill:none;width:16px;height:16px;stroke-width:2;}
+.topbar-right{display:flex;align-items:center;gap:16px;}
+.topbar-greeting{font-size:.875rem;color:var(--muted);}
+.topbar-greeting strong{color:var(--text);font-weight:500;}
+.avatar{
+  width:34px;height:34px;border-radius:50%;background:var(--green-light);
+  color:var(--green);font-weight:500;font-size:.8rem;
+  display:flex;align-items:center;justify-content:center;cursor:default;
+}
+.btn-logout{
+  padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;
+  background:transparent;font-family:'DM Sans',sans-serif;font-size:.8rem;
+  color:var(--muted);cursor:pointer;transition:all .2s;
+}
+.btn-logout:hover{border-color:var(--err);color:var(--err);}
+.notif-bell{
+  position:relative;width:34px;height:34px;border:1.5px solid var(--border);
+  border-radius:9px;background:white;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:border-color .2s;
+}
+.notif-bell:hover{border-color:var(--green);}
+.notif-bell svg{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2;}
+.notif-badge{
+  position:absolute;top:-4px;right:-4px;
+  width:14px;height:14px;border-radius:50%;
+  background:var(--err);color:white;font-size:.6rem;font-weight:500;
+  display:flex;align-items:center;justify-content:center;border:2px solid var(--bg);
+}
+
+/* ── MAIN CONTENT ── */
+.main{
+  max-width:1100px;margin:0 auto;
+  padding:32px 32px 60px;
+  position:relative;z-index:1;
+}
+
+/* ── PAGE HEADER ── */
+.page-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  margin-bottom:28px;
+  animation:fadeUp .5s ease both;
+}
+.page-title{
+  font-family:'Fraunces',serif;font-weight:300;font-style:italic;
+  font-size:1.75rem;color:var(--text);line-height:1.2;margin-bottom:4px;
+}
+.page-sub{font-size:.875rem;color:var(--muted);font-weight:300;}
+.period-group{display:flex;gap:4px;}
+.period-btn{
+  padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;
+  background:white;font-family:'DM Sans',sans-serif;font-size:.8rem;
+  color:var(--muted);cursor:pointer;transition:all .2s;
+}
+.period-btn.active,
+.period-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light);}
+
+/* ── SECTION ── */
+.section{margin-bottom:28px;animation:fadeUp .5s ease both;}
+.section-title{
+  font-size:.75rem;font-weight:500;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--muted);margin-bottom:14px;
+}
+
+/* ── METRIC CARDS ── */
+.metrics-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:14px;
+}
+@media(max-width:800px){.metrics-grid{grid-template-columns:repeat(2,1fr);}}
+
+.metric-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:18px 20px;position:relative;overflow:hidden;
+  transition:transform .2s,box-shadow .2s;cursor:default;
+}
+.metric-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm);}
+.metric-card::before{
+  content:'';position:absolute;top:-20px;right:-20px;
+  width:80px;height:80px;border-radius:50%;
+  background:var(--accent-glow,rgba(26,107,74,.05));
+}
+.metric-icon{
+  width:32px;height:32px;border-radius:9px;
+  background:var(--icon-bg,var(--green-light));
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:12px;
+}
+.metric-icon svg{width:16px;height:16px;stroke:var(--icon-color,var(--green));fill:none;stroke-width:2;}
+.metric-label{font-size:.75rem;color:var(--muted);margin-bottom:4px;font-weight:400;}
+.metric-value{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:600;color:var(--text);line-height:1;}
+.metric-unit{font-size:.8rem;color:var(--muted);font-weight:300;margin-left:2px;}
+.metric-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  margin-top:8px;padding:3px 8px;border-radius:20px;font-size:.72rem;font-weight:500;
+}
+.badge-green{background:var(--green-light);color:var(--green);}
+.badge-red{background:var(--err-light);color:var(--err);}
+.badge-amber{background:var(--amber-light);color:var(--amber);}
+
+/* ── TWO COLUMN GRID ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:800px){.two-col{grid-template-columns:1fr;}}
+
+/* ── CHART CARD ── */
+.chart-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 22px;
+}
+.chart-header{
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;
+}
+.chart-title{font-size:.9rem;font-weight:500;}
+.chart-sub{font-size:.75rem;color:var(--muted);margin-bottom:16px;}
+.chart-svg-wrap{position:relative;height:120px;}
+.chart-svg-wrap svg{width:100%;height:100%;}
+.chart-x-labels{
+  display:flex;justify-content:space-between;
+  font-size:.68rem;color:var(--muted);margin-top:6px;padding:0 2px;
+}
+.chart-legend{
+  display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;
+}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted);}
+.legend-dot{width:8px;height:8px;border-radius:50%;}
+
+/* ── IOT CARD ── */
+.iot-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 22px;
+}
+.iot-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.iot-device-badge{
+  display:flex;align-items:center;gap:6px;
+  padding:4px 10px;border-radius:20px;
+  background:var(--green-light);color:var(--green);font-size:.75rem;font-weight:500;
+}
+.iot-device-badge span{
+  width:6px;height:6px;border-radius:50%;background:var(--green);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.iot-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 0;border-bottom:1px solid var(--border);
+}
+.iot-row:last-child{border:none;padding-bottom:0;}
+.iot-row-left{display:flex;align-items:center;gap:10px;}
+.iot-row-icon{
+  width:28px;height:28px;border-radius:8px;background:var(--green-light);
+  display:flex;align-items:center;justify-content:center;
+}
+.iot-row-icon svg{width:13px;height:13px;stroke:var(--green);fill:none;stroke-width:2;}
+.iot-row-label{font-size:.82rem;color:var(--muted);}
+.iot-row-val{font-size:.95rem;font-weight:500;}
+.btn-add-metric{
+  width:100%;margin-top:14px;padding:10px;
+  border:1.5px dashed var(--border);border-radius:10px;
+  background:transparent;font-family:'DM Sans',sans-serif;
+  font-size:.82rem;color:var(--muted);cursor:pointer;
+  transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn-add-metric:hover{border-color:var(--green);color:var(--green);background:var(--green-light);}
+
+/* ── REHAB PLAN ── */
+.plan-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 22px;
+}
+.plan-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;}
+.plan-title-text{font-size:.9rem;font-weight:500;margin-bottom:2px;}
+.plan-dates{font-size:.75rem;color:var(--muted);}
+.plan-active-badge{
+  padding:4px 10px;border-radius:20px;
+  background:var(--green-light);color:var(--green);font-size:.72rem;font-weight:500;white-space:nowrap;
+}
+.plan-progress{margin-bottom:16px;}
+.plan-progress-bar{
+  height:6px;border-radius:3px;background:#ede9e2;overflow:hidden;margin-top:6px;
+}
+.plan-progress-fill{
+  height:100%;border-radius:3px;background:var(--green);
+  transition:width .6s ease;
+}
+.plan-progress-label{font-size:.72rem;color:var(--muted);margin-top:4px;}
+.task-list{display:flex;flex-direction:column;gap:8px;}
+.task-item{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 14px;border:1px solid var(--border);border-radius:10px;
+  background:white;transition:background .15s;
+}
+.task-item.done{background:#fafaf9;}
+.task-check{
+  width:20px;height:20px;border-radius:6px;border:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .2s;flex-shrink:0;
+}
+.task-check.done{background:var(--green);border-color:var(--green);}
+.task-check.done::after{
+  content:'';width:10px;height:6px;
+  border-left:2px solid #fff;border-bottom:2px solid #fff;
+  transform:rotate(-45deg) translate(1px,-1px);display:block;
+}
+.task-info{flex:1;min-width:0;}
+.task-text{font-size:.875rem;transition:color .2s;}
+.task-item.done .task-text{color:var(--muted);text-decoration:line-through;}
+.task-freq{font-size:.72rem;color:var(--muted);margin-top:1px;}
+
+/* ── QUESTIONNAIRE ── */
+.q-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 22px;
+}
+.q-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.q-item{margin-bottom:18px;}
+.q-item:last-child{margin-bottom:0;}
+.q-text{font-size:.875rem;font-weight:500;margin-bottom:10px;line-height:1.5;}
+.scale-wrap{display:flex;gap:6px;flex-wrap:wrap;}
+.scale-btn{
+  width:38px;height:38px;border:1.5px solid var(--border);border-radius:9px;
+  background:white;color:var(--text);font-family:'DM Sans',sans-serif;
+  font-size:.875rem;font-weight:500;cursor:pointer;transition:all .2s;
+}
+.scale-btn:hover{border-color:var(--green);color:var(--green);}
+.scale-btn.sel{background:var(--green);border-color:var(--green);color:white;}
+.scale-labels{
+  display:flex;justify-content:space-between;
+  font-size:.68rem;color:var(--muted);margin-top:6px;padding:0 2px;
+}
+.btn-save{
+  padding:10px 22px;background:var(--green);color:white;border:none;
+  border-radius:9px;font-family:'DM Sans',sans-serif;font-size:.875rem;
+  font-weight:500;cursor:pointer;margin-top:6px;transition:all .2s;
+}
+.btn-save:hover{background:var(--green-mid);box-shadow:0 4px 16px rgba(26,107,74,.25);}
+.btn-save:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ── MODAL ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.35);
+  display:flex;align-items:center;justify-content:center;z-index:200;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{
+  background:white;border-radius:20px;padding:28px 32px;
+  width:100%;max-width:420px;
+  transform:translateY(20px);transition:transform .25s;
+  box-shadow:0 24px 64px rgba(0,0,0,.15);
+}
+.modal-overlay.open .modal{transform:none;}
+.modal-title{
+  font-family:'Fraunces',serif;font-weight:600;font-size:1.3rem;
+  margin-bottom:4px;
+}
+.modal-sub{font-size:.8rem;color:var(--muted);margin-bottom:20px;}
+.modal-field{margin-bottom:14px;}
+.modal-field label{
+  display:block;font-size:.75rem;font-weight:500;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;
+}
+.modal-field input,.modal-field select{
+  width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;
+  font-family:'DM Sans',sans-serif;font-size:.9rem;color:var(--text);
+  background:white;outline:none;transition:border-color .2s;appearance:none;
+}
+.modal-field input:focus,.modal-field select:focus{border-color:var(--green);}
+.modal-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.modal-footer{display:flex;gap:10px;margin-top:20px;}
+.btn-cancel{
+  flex:1;padding:10px;border:1.5px solid var(--border);border-radius:9px;
+  background:transparent;font-family:'DM Sans',sans-serif;font-size:.875rem;
+  color:var(--muted);cursor:pointer;
+}
+.btn-modal-save{
+  flex:2;padding:10px;background:var(--green);color:white;border:none;
+  border-radius:9px;font-family:'DM Sans',sans-serif;font-size:.875rem;
+  font-weight:500;cursor:pointer;transition:background .2s;
+}
+.btn-modal-save:hover{background:var(--green-mid);}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:#1a1a1a;color:white;padding:10px 20px;border-radius:10px;
+  font-size:.85rem;z-index:300;opacity:0;transition:all .3s;white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.success{background:var(--green);}
+.toast.error{background:var(--err);}
+
+/* ── SKELETON ── */
+.skeleton{
+  background:linear-gradient(90deg,#ede9e2 25%,#e5e1d8 50%,#ede9e2 75%);
+  background-size:200% 100%;
+  animation:shimmer 1.4s infinite;
+  border-radius:8px;
+}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton-text{height:14px;margin-bottom:8px;}
+.skeleton-value{height:28px;width:60%;margin-bottom:8px;}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.section:nth-child(1){animation-delay:.05s}
+.section:nth-child(2){animation-delay:.1s}
+.section:nth-child(3){animation-delay:.15s}
+.section:nth-child(4){animation-delay:.2s}
+.section:nth-child(5){animation-delay:.25s}
+
+/* ── EMPTY STATE ── */
+.empty-state{
+  text-align:center;padding:32px 20px;color:var(--muted);
+}
+.empty-state svg{width:40px;height:40px;stroke:var(--border);fill:none;stroke-width:1.5;margin-bottom:10px;}
+.empty-state p{font-size:.875rem;}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ TOPBAR ══════════════════ -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <div class="topbar-logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/><path d="M9 9h6M12 6v6"/></svg>
+    </div>
+    RehabCare
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-greeting">Вітаємо, <strong id="userName">...</strong></span>
+    <div class="notif-bell" onclick="toggleNotifPanel()" title="Сповіщення">
+      <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <div class="notif-badge" id="notifBadge" style="display:none">0</div>
+    </div>
+    <div class="avatar" id="userAvatar">??</div>
+    <button class="btn-logout" onclick="handleLogout()">Вийти</button>
+  </div>
+</header>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main class="main">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header section">
+    <div>
+      <div class="page-title">Мій дашборд</div>
+      <div class="page-sub" id="pageSubDate">Завантаження...</div>
+    </div>
+    <div class="period-group">
+      <button class="period-btn active" onclick="setPeriod(this,'week')">Тиждень</button>
+      <button class="period-btn" onclick="setPeriod(this,'month')">Місяць</button>
+      <button class="period-btn" onclick="setPeriod(this,'3months')">3 місяці</button>
+    </div>
+  </div>
+
+  <!-- METRICS -->
+  <div class="section">
+    <div class="section-title">Показники здоров'я</div>
+    <div class="metrics-grid" id="metricsGrid">
+      <!-- skeleton -->
+      <div class="metric-card"><div class="skeleton skeleton-text" style="width:50%"></div><div class="skeleton skeleton-value"></div></div>
+      <div class="metric-card"><div class="skeleton skeleton-text" style="width:50%"></div><div class="skeleton skeleton-value"></div></div>
+      <div class="metric-card"><div class="skeleton skeleton-text" style="width:50%"></div><div class="skeleton skeleton-value"></div></div>
+      <div class="metric-card"><div class="skeleton skeleton-text" style="width:50%"></div><div class="skeleton skeleton-value"></div></div>
+    </div>
+  </div>
+
+  <!-- CHART + IOT -->
+  <div class="section two-col">
+    <!-- Chart -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">Динаміка показників</span>
+        <span class="badge-green metric-badge" id="chartBadge">—</span>
+      </div>
+      <div class="chart-sub">Пульс та SpO₂ за обраний період</div>
+      <div class="chart-svg-wrap" style="height:250px;position:relative;"><canvas id="myChart" style="width:100%;height:100%;display:block;"></canvas></div>
+      <div class="chart-x-labels" id="chartXLabels"></div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#1a6b4a"></div>Пульс (уд/хв)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>SpO₂ (%)</div>
+      </div>
+    </div>
+
+    <!-- IoT -->
+    <div class="iot-card">
+      <div class="iot-header">
+        <span class="chart-title">IoT — пристрої</span>
+        <div class="iot-device-badge"><span></span>Онлайн</div>
+      </div>
+      <div id="iotRows">
+        <div class="iot-row">
+          <div class="iot-row-left">
+            <div class="iot-row-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+            <span class="iot-row-label">Пульс (браслет)</span>
+          </div>
+          <span class="iot-row-val" id="iotHeartRate">—</span>
+        </div>
+        <div class="iot-row">
+          <div class="iot-row-left">
+            <div class="iot-row-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
+            <span class="iot-row-label">Кроки сьогодні</span>
+          </div>
+          <span class="iot-row-val" id="iotSteps">—</span>
+        </div>
+        <div class="iot-row">
+          <div class="iot-row-left">
+            <div class="iot-row-icon"><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg></div>
+            <span class="iot-row-label">Сон</span>
+          </div>
+          <span class="iot-row-val" id="iotSleep">—</span>
+        </div>
+        <div class="iot-row">
+          <div class="iot-row-left">
+            <div class="iot-row-icon"><svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20"/></svg></div>
+            <span class="iot-row-label">SpO₂ (пульсоксим.)</span>
+          </div>
+          <span class="iot-row-val" id="iotSpo2">—</span>
+        </div>
+      </div>
+      <button class="btn-add-metric" onclick="openMetricModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Додати показник вручну
+      </button>
+    </div>
+  </div>
+
+  <!-- REHAB PLAN -->
+  <div class="section">
+    <div class="section-title">План реабілітації</div>
+    <div class="plan-card" id="planCard">
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M12 8v8"/></svg>
+        <p>Завантаження плану...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUESTIONNAIRE -->
+  <div class="section">
+    <div class="section-title">Опитувальники</div>
+    <div class="q-card">
+      <div class="q-header">
+        <span class="chart-title">Шкала болю VAS</span>
+        <span class="badge-green metric-badge">Сьогодні</span>
+      </div>
+
+      <div class="q-item">
+        <div class="q-text">Оцініть рівень болю прямо зараз</div>
+        <div class="scale-wrap" id="vasScale"></div>
+        <div class="scale-labels"><span>0 — немає болю</span><span>10 — нестерпний</span></div>
+      </div>
+
+      <div class="q-item">
+        <div class="q-text">Загальне самопочуття сьогодні</div>
+        <div class="scale-wrap" id="wellnessScale"></div>
+        <div class="scale-labels"><span>1 — дуже погано</span><span>5 — відмінно</span></div>
+      </div>
+
+      <div class="q-item">
+        <div class="q-text">Чи виконували ви всі вправи за планом?</div>
+        <div class="scale-wrap" id="exerciseScale">
+          <button class="scale-btn" onclick="selExercise(this,'yes')">Так ✓</button>
+          <button class="scale-btn" onclick="selExercise(this,'partial')">Частково</button>
+          <button class="scale-btn" onclick="selExercise(this,'no')">Ні ✗</button>
+        </div>
+      </div>
+
+      <button class="btn-save" id="saveSurveyBtn" onclick="saveSurvey()">Зберегти відповіді</button>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══════════════════ MODAL: ДОДАТИ ПОКАЗНИК ══════════════════ -->
+<div class="modal-overlay" id="metricModal">
+  <div class="modal">
+    <div class="modal-title">Додати показник</div>
+    <div class="modal-sub">Введіть виміряний показник здоров'я</div>
+    <div class="modal-field">
+      <label>Тип показника</label>
+      <select id="metricType" onchange="updateMetricUnit()">
+        <option value="heart_rate">Пульс</option>
+        <option value="blood_pressure_systolic">Тиск систолічний</option>
+        <option value="blood_pressure_diastolic">Тиск діастолічний</option>
+        <option value="weight">Вага</option>
+        <option value="spo2">Сатурація (SpO₂)</option>
+        <option value="temperature">Температура</option>
+        <option value="blood_glucose">Глюкоза крові</option>
+      </select>
+    </div>
+    <div class="modal-row2">
+      <div class="modal-field">
+        <label>Значення</label>
+        <input type="number" id="metricValue" placeholder="0" step="0.1"/>
+      </div>
+      <div class="modal-field">
+        <label>Одиниця</label>
+        <input type="text" id="metricUnit" value="уд/хв" readonly style="background:#f5f2ed;color:var(--muted)"/>
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>Нотатка (необов'язково)</label>
+      <input type="text" id="metricNote" placeholder="Після ранкової прогулянки..."/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeMetricModal()">Скасувати</button>
+      <button class="btn-modal-save" onclick="saveMetric()">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+<script>
+// ============================================================
+// ПІДКЛЮЧЕННЯ ДО SUPABASE (ОДИН РАЗ)
+// ============================================================
+
+
+const SUPABASE_URL = 'https://knzhfxpwwarrpdeqabwo.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_bWfuX9a_BzECFgmpDNDy3Q_iEzd8mjG';
+
+if (!window._supabaseClient) {
+    window._supabaseClient = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY
+    );
+}
+
+const sb = window._supabaseClient;
+// ============================================================
+// ГЛОБАЛЬНІ ЗМІННІ
+// ============================================================
+let currentUser = null;
+let currentPeriod = 'week';
+let metricsCache = {};
+let vasScore = null;
+let wellnessScore = null;
+let exerciseAnswer = null;
+
+const METRIC_CONFIG = {
+  heart_rate: { label: 'Пульс', unit: 'уд/хв', icon: 'heart', norm: [60, 100], color: '#1a6b4a' },
+  blood_pressure: {label: 'Тиск', unit: 'мм рт', icon: 'gauge', norm: [90, 140], color: '#2563eb'},
+  spo2: { label: 'SpO₂', unit: '%', icon: 'droplet', norm: [95, 100], color: '#0d9488' },
+  weight: { label: 'Вага', unit: 'кг', icon: 'scale', norm: null, color: '#d97706' },
+};
+
+const PERIOD_DAYS = { week: 7, month: 30, '3months': 90 };
+
+// ============================================================
+// ІНІЦІАЛІЗАЦІЯ
+// ============================================================
+function initDashboard() {
+    document.addEventListener('DOMContentLoaded', async () => {
+        const { data: { session } } = await sb.auth.getSession();
+        console.log("SESSION:", session);
+
+        if (!session) {
+            window.location.href = 'index.html';
+            return;
+        }
+
+        currentUser = session.user;
+
+        const { data: profile } = await sb
+            .from('profiles')
+            .select('full_name')
+            .eq('id', currentUser.id)
+            .single();
+
+        const name = profile?.full_name || currentUser.email;
+        document.getElementById('userName').textContent = name.split(' ')[0];
+        document.getElementById('userAvatar').textContent = name
+            .split(' ')
+            .map(w => w[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+
+        document.getElementById('pageSubDate').textContent =
+            'Сьогодні, ' + new Date().toLocaleDateString('uk-UA', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long'
+            });
+
+        buildScales();
+        await Promise.all([loadMetrics(), loadRehabPlan()]);
+    });
+}
+
+initDashboard();
+// ============================================================
+// ГРАФІК CHART.JS
+// ============================================================
+function renderChartJS(byType) {
+    // Guard: Chart.js may not be loaded yet
+    if (typeof Chart === 'undefined') {
+        setTimeout(() => renderChartJS(byType), 100);
+        return;
+    }
+
+    const hrData  = byType['heart_rate'] || [];
+    const spo2Data = byType['spo2'] || [];
+
+    // Build a unified sorted label set from both datasets
+    const allDates = [...new Set([
+        ...hrData.map(m => m.recorded_at),
+        ...spo2Data.map(m => m.recorded_at)
+    ])].sort();
+
+    const labels = allDates.map(d => new Date(d).toLocaleDateString('uk-UA', { day:'numeric', month:'short' }));
+
+    // Map values by recorded_at for alignment
+    const hrMap   = Object.fromEntries(hrData.map(m  => [m.recorded_at, m.value]));
+    const spo2Map = Object.fromEntries(spo2Data.map(m => [m.recorded_at, m.value]));
+
+    const hrValues   = allDates.map(d => hrMap[d]   ?? null);
+    const spo2Values = allDates.map(d => spo2Map[d] ?? null);
+
+    const canvasEl = document.getElementById('myChart');
+    if (!canvasEl) return;
+    const ctx = canvasEl.getContext('2d');
+
+    if (window.myChartInstance) {
+        window.myChartInstance.destroy();
+        window.myChartInstance = null;
+    }
+
+    window.myChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Пульс (уд/хв)',
+                    data: hrValues,
+                    borderColor: '#1a6b4a',
+                    backgroundColor: 'rgba(26,107,74,0.08)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    borderWidth: 2,
+                    spanGaps: true,
+                    yAxisID: 'yHR'
+                },
+                {
+                    label: 'SpO₂ (%)',
+                    data: spo2Values,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59,130,246,0.06)',
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    borderWidth: 2,
+                    spanGaps: true,
+                    yAxisID: 'ySPO2'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: {
+                    label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y ?? '—'}`
+                }}
+            },
+            scales: {
+                yHR: {
+                    type: 'linear',
+                    position: 'left',
+                    beginAtZero: false,
+                    grid: { color: '#ede9e2' },
+                    ticks: { font: { size: 11 } }
+                },
+                ySPO2: {
+                    type: 'linear',
+                    position: 'right',
+                    beginAtZero: false,
+                    min: 85,
+                    max: 100,
+                    grid: { drawOnChartArea: false },
+                    ticks: { font: { size: 11 }, callback: v => v + '%' }
+                },
+                x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+            }
+        }
+    });
+
+    // Update badge with latest HR
+    const latestHR = hrData.at(-1);
+    const badge = document.getElementById('chartBadge');
+    if (badge && latestHR) badge.textContent = latestHR.value + ' уд/хв';
+}
+
+// ============================================================
+// МЕТРИКИ
+// ============================================================
+async function loadMetrics() {
+    console.log("LOAD METRICS START");
+    console.log("CURRENT USER:", currentUser);
+
+    const days = PERIOD_DAYS[currentPeriod];
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+
+    const { data, error } = await sb
+        .from('health_metrics')
+        .select('metric_type,value,recorded_at')
+        .eq('patient_id', currentUser.id)
+        .gte('recorded_at', since)
+        .order('recorded_at', { ascending: true });
+
+    console.log("METRICS DATA:", data);
+    console.log("METRICS ERROR:", error);
+
+    if (error) {
+        console.error('Metrics load error:', error);
+        showToast(error.message, 'error');
+        return;
+    }
+
+    const byType = {};
+    (data || []).forEach(r => {
+        if (!byType[r.metric_type]) byType[r.metric_type] = [];
+        byType[r.metric_type].push(r);
+    });
+
+    renderMetricCards(byType);
+    renderChartJS(byType);
+    updateIoT(byType);
+}
+
+function renderMetricCards(byType) {
+    const grid = document.getElementById('metricsGrid');
+    if (!grid) return;
+    
+    grid.innerHTML = Object.entries(METRIC_CONFIG).map(([type, cfg]) => {
+                let val = '—';
+
+if (type === 'blood_pressure') {
+    const systolic = byType['blood_pressure_systolic']?.at(-1);
+    const diastolic = byType['blood_pressure_diastolic']?.at(-1);
+
+    if (systolic && diastolic) {
+        val = `${systolic.value}/${diastolic.value}`;
+    } else if (systolic) {
+        val = systolic.value;
+    }
+} else {
+    const rows = byType[type] || [];
+    const latest = rows.at(-1);
+
+    val = latest
+        ? Number(latest.value).toFixed(type === 'weight' ? 1 : 0)
+        : '—';
+}
+        const unit = cfg.unit;
+        return `
+            <div class="metric-card">
+    <div class="metric-icon"></div>
+
+    <div class="metric-label">
+        ${cfg.label}
+    </div>
+
+    <div class="metric-value">
+        ${val}
+        ${val !== '—' ? `<span class="metric-unit">${unit}</span>` : ''}
+    </div>
+</div>`;
+    }).join('');
+}
+
+function updateIoT(byType) {
+    const hr = byType['heart_rate']?.at(-1);
+    const spo2 = byType['spo2']?.at(-1);
+    if (hr) document.getElementById('iotHeartRate').textContent = hr.value + ' уд/хв';
+    if (spo2) document.getElementById('iotSpo2').textContent = spo2.value + '%';
+}
+
+// ============================================================
+// ПЛАН РЕАБІЛІТАЦІЇ
+// ============================================================
+async function loadRehabPlan() {
+    const { data: plan, error } = await sb
+        .from('rehabilitation_plans')
+        .select('*')
+        .eq('patient_id', currentUser.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+    console.log("REHAB PLAN:", plan);
+    console.log("REHAB PLAN ERROR:", error);
+
+    const container = document.getElementById('planCard');
+
+    if (error) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <p>Помилка завантаження плану</p>
+            </div>
+        `;
+        return;
+    }
+
+    if (!plan) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <p>Активний план реабілітації відсутній</p>
+            </div>
+        `;
+        return;
+    }
+
+    const { data: tasks = [], error: tasksError } = await sb
+        .from('rehab_tasks')
+        .select('*')
+        .eq('plan_id', plan.id)
+        .order('order_index', { ascending: true });
+
+    console.log("TASKS:", tasks);
+    console.log("TASKS ERROR:", tasksError);
+
+    if (tasksError) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <p>Помилка завантаження завдань</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="plan-header">
+            <span class="plan-title-text">${plan.title}</span>
+            <span class="plan-active-badge">Активний</span>
+        </div>
+
+        <div class="task-list">
+            ${tasks.length ? tasks.map(task => `
+                <div class="task-item">
+                    <div class="task-check"></div>
+                    <div class="task-info">
+                        <div class="task-text">${task.title}</div>
+                        <div class="task-freq">${task.frequency || ''}</div>
+                        ${task.description ? `<div class="task-freq">${task.description}</div>` : ''}
+                    </div>
+                </div>
+            `).join('') : `
+                <div class="empty-state">
+                    <p>Для цього плану ще немає завдань</p>
+                </div>
+            `}
+        </div>
+    `;
+}
+
+// ============================================================
+// МОДАЛКА ТА ОДИНИЦІ
+// ============================================================
+function updateMetricUnit() {
+    const type = document.getElementById('metricType').value;
+    const unitMap = {
+        heart_rate: 'уд/хв',
+        blood_pressure_systolic: 'мм рт',
+        blood_pressure_diastolic: 'мм рт',
+        weight: 'кг',
+        spo2: '%',
+        temperature: '°C',
+        blood_glucose: 'ммоль/л'
+    };
+    document.getElementById('metricUnit').value = unitMap[type] || '';
+}
+
+function openMetricModal() { 
+    const modal = document.getElementById('metricModal');
+    if (modal) modal.classList.add('open');
+}
+function closeMetricModal() { 
+    const modal = document.getElementById('metricModal');
+    if (modal) modal.classList.remove('open');
+}
+
+async function saveMetric() {
+    const type = document.getElementById('metricType').value;
+    const value = parseFloat(document.getElementById('metricValue').value);
+    if (isNaN(value)) {
+        showToast('Введіть коректне значення', 'error');
+        return;
+    }
+
+    const { error } = await sb.from('health_metrics').insert({
+    patient_id: currentUser.id,
+    metric_type: type,
+    value: value,
+    unit: document.getElementById('metricUnit').value,
+    source: 'manual'
+});
+    
+    if (error) {
+        showToast('Помилка: ' + error.message, 'error');
+        return;
+    }
+    
+    closeMetricModal();
+    document.getElementById('metricValue').value = '';
+    showToast('Показник збережено!', 'success');
+    loadMetrics();
+}
+
+// ============================================================
+// ШКАЛИ БОЛЮ (VAS)
+// ============================================================
+function buildScales() {
+    const vas = document.getElementById('vasScale');
+    const wellness = document.getElementById('wellnessScale');
+    
+    if (vas) {
+        for (let i = 0; i <= 10; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'scale-btn'; 
+            btn.textContent = i;
+            btn.onclick = () => {
+                vasScore = i;
+                vas.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('sel'));
+                btn.classList.add('sel');
+            };
+            vas.appendChild(btn);
+        }
+    }
+
+    if (wellness) {
+        for (let i = 1; i <= 5; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'scale-btn'; 
+            btn.textContent = i;
+            btn.onclick = () => {
+                wellnessScore = i;
+                wellness.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('sel'));
+                btn.classList.add('sel');
+            };
+            wellness.appendChild(btn);
+        }
+    }
+}
+
+function selExercise(btn, val) {
+    exerciseAnswer = val;
+    const container = document.getElementById('exerciseScale');
+    if (container) {
+        container.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('sel'));
+    }
+    btn.classList.add('sel');
+}
+
+async function saveSurvey() {
+    if (vasScore === null) { 
+        showToast('Оберіть рівень болю', 'error');
+        return; 
+    }
+    if (wellnessScore === null) {
+        showToast('Оберіть самопочуття', 'error');
+        return;
+    }
+    if (exerciseAnswer === null) {
+        showToast('Оберіть виконання вправ', 'error');
+        return;
+    }
+    
+    // Зберігаємо відповіді в БД (спрощено - як health_metric для болю)
+    const {
+        data: { user }
+      } = await sb.auth.getUser();
+      console.log('AUTH USER:', user.id);
+      console.log('CURRENT USER:', currentUser.id);
+    
+      const { error } = await sb.from('health_metrics').insert({
+        patient_id: currentUser.id,
+        metric_type: 'pain_score',
+        value: vasScore,
+        unit: 'scale 0-10',
+        note: `Самопочуття: ${wellnessScore}/5, Вправи: ${exerciseAnswer}`,
+        source: 'questionnaire'
+    });
+    
+    if (error) {
+        showToast('Помилка збереження: ' + error.message, 'error');
+        return;
+    }
+    
+    showToast('Відповіді збережено!', 'success');
+    
+    // Скидаємо вибір
+    vasScore = null;
+    wellnessScore = null;
+    exerciseAnswer = null;
+    
+    document.querySelectorAll('#vasScale .scale-btn, #wellnessScale .scale-btn, #exerciseScale .scale-btn')
+        .forEach(b => b.classList.remove('sel'));
+}
+
+// ============================================================
+// ДОПОМІЖНІ ФУНКЦІЇ
+// ============================================================
+function setPeriod(btn, p) {
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentPeriod = p;
+    loadMetrics();
+}
+
+function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg; 
+    t.className = `toast show ${type}`;
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+async function handleLogout() {
+    await sb.auth.signOut();
+    window.location.href = 'index.html';
+}
+
+function toggleNotifPanel() {
+    showToast('Немає нових сповіщень', '');
+}
+
+// Закриття модалки кліком поза нею
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('metricModal');
+    if (modal && modal.classList.contains('open') && e.target === modal) {
+        closeMetricModal();
+    }
+});
+
+// ============================================================
+// ЕКСПОРТ ФУНКЦІЙ У ГЛОБАЛЬНУ ОБЛАСТЬ
+// ============================================================
+window.setPeriod = setPeriod;
+window.openMetricModal = openMetricModal;
+window.closeMetricModal = closeMetricModal;
+window.saveMetric = saveMetric;
+window.updateMetricUnit = updateMetricUnit;
+window.selExercise = selExercise;
+window.saveSurvey = saveSurvey;
+window.handleLogout = handleLogout;
+window.toggleNotifPanel = toggleNotifPanel;
+</script>
+</body>
+</html>
