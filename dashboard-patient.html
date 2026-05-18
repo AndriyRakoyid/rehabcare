@@ -248,13 +248,29 @@ body::before{
   padding:11px 14px;border:1px solid var(--border);border-radius:10px;
   background:white;transition:background .15s;
 }
-.task-item.done{background:#fafaf9;}
+.task-item.done{ background:#f0fdf4; border-color:#86efac; }
 .task-check{
   width:20px;height:20px;border-radius:6px;border:1.5px solid var(--border);
   display:flex;align-items:center;justify-content:center;
   cursor:pointer;transition:all .2s;flex-shrink:0;
 }
 .task-check.done{background:var(--green);border-color:var(--green);}
+.task-item{
+  transition:all .25s ease;
+}
+
+.task-item:hover{
+  transform:translateY(-2px);
+  box-shadow:var(--shadow-sm);
+}
+
+.task-check{
+  transition:all .2s ease;
+}
+
+.task-check.done{
+  transform:scale(1.05);
+}
 .task-check.done::after{
   content:'';width:10px;height:6px;
   border-left:2px solid #fff;border-bottom:2px solid #fff;
@@ -270,6 +286,7 @@ body::before{
   background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 22px;
 }
 .q-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.q-sub{font-size:.8rem; color:var(--muted); margin-bottom:18px;line-height:1.5;}
 .q-item{margin-bottom:18px;}
 .q-item:last-child{margin-bottom:0;}
 .q-text{font-size:.875rem;font-weight:500;margin-bottom:10px;line-height:1.5;}
@@ -281,6 +298,29 @@ body::before{
 }
 .scale-btn:hover{border-color:var(--green);color:var(--green);}
 .scale-btn.sel{background:var(--green);border-color:var(--green);color:white;}
+.exercise-btn{
+  padding:10px 16px;
+  border:1.5px solid var(--border);
+  border-radius:10px;
+  background:white;
+  font-family:'DM Sans',sans-serif;
+  font-size:.85rem;
+  color:var(--text);
+  cursor:pointer;
+  transition:all .2s;
+}
+
+.exercise-btn:hover{
+  border-color:var(--green);
+  color:var(--green);
+  background:var(--green-light);
+}
+
+.exercise-btn.sel{
+  background:var(--green);
+  border-color:var(--green);
+  color:white;
+}
 .scale-labels{
   display:flex;justify-content:space-between;
   font-size:.68rem;color:var(--muted);margin-top:6px;padding:0 2px;
@@ -487,24 +527,21 @@ body::before{
   <div class="section">
     <div class="section-title">План реабілітації</div>
     <div class="plan-card" id="planCard">
-      <div class="empty-state">
-        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M12 8v8"/></svg>
-        <p>Завантаження плану...</p>
-      </div>
-    </div>
-  </div>
 
   <!-- QUESTIONNAIRE -->
   <div class="section">
-    <div class="section-title">Опитувальники</div>
+    <div class="section-title">Щоденний стан пацієнта</div>
     <div class="q-card">
       <div class="q-header">
-        <span class="chart-title">Шкала болю VAS</span>
-        <span class="badge-green metric-badge">Сьогодні</span>
-      </div>
+    <span class="chart-title">Шкала болю VAS</span>
+    <span class="badge-green metric-badge">Сьогодні</span>
+  </div>
+  <div class="q-sub">
+  Допоможіть лікарю оцінити ваш поточний стан та ефективність реабілітації
+</div>
 
       <div class="q-item">
-        <div class="q-text">Оцініть рівень болю прямо зараз</div>
+        <div class="q-text"> Наскільки сильний біль ви відчуваєте зараз? </div>
         <div class="scale-wrap" id="vasScale"></div>
         <div class="scale-labels"><span>0 — немає болю</span><span>10 — нестерпний</span></div>
       </div>
@@ -518,13 +555,12 @@ body::before{
       <div class="q-item">
         <div class="q-text">Чи виконували ви всі вправи за планом?</div>
         <div class="scale-wrap" id="exerciseScale">
-          <button class="scale-btn" onclick="selExercise(this,'yes')">Так ✓</button>
-          <button class="scale-btn" onclick="selExercise(this,'partial')">Частково</button>
-          <button class="scale-btn" onclick="selExercise(this,'no')">Ні ✗</button>
+          <button class="exercise-btn" onclick="selExercise(this,'yes')">  ✓ Виконано </button>
+          <button class="exercise-btn" onclick="selExercise(this,'partial')"> ◐ Частково </button>
+          <button class="exercise-btn" onclick="selExercise(this,'no')"> ✕ Не виконано </button>
         </div>
       </div>
-
-      <button class="btn-save" id="saveSurveyBtn" onclick="saveSurvey()">Зберегти відповіді</button>
+      <button class="btn-save" id="saveSurveyBtn" onclick="saveSurvey()">Надіслати оцінку стану</button>
     </div>
   </div>
 
@@ -892,29 +928,72 @@ async function loadRehabPlan() {
         return;
     }
 
-    container.innerHTML = `
-        <div class="plan-header">
-            <span class="plan-title-text">${plan.title}</span>
-            <span class="plan-active-badge">Активний</span>
+const completed = 2;
+const total = tasks.length;
+const progress = total ? Math.round((completed / total) * 100) : 0;
+
+container.innerHTML = `
+    <div class="plan-header">
+        <div>
+            <div class="plan-title-text">${plan.title}</div>
+
+            <div class="plan-progress-label">
+                Виконано ${completed}/${total} вправ • ${progress}%
+            </div>
+
+            <div class="plan-progress-bar">
+                <div 
+                    class="plan-progress-fill"
+                    style="width:${progress}%">
+                </div>
+            </div>
         </div>
 
-        <div class="task-list">
-            ${tasks.length ? tasks.map(task => `
-                <div class="task-item">
-                    <div class="task-check"></div>
+        <span class="plan-active-badge">Активний</span>
+    </div>
+
+    <div class="task-list">
+        ${tasks.length ? tasks.map((task,index) => {
+
+            const done = index < completed;
+
+            return `
+                <div class="task-item ${done ? 'done' : ''}">
+                    
+                    <div class="task-check ${done ? 'done' : ''}">
+                    </div>
+
                     <div class="task-info">
-                        <div class="task-text">${task.title}</div>
-                        <div class="task-freq">${task.frequency || ''}</div>
-                        ${task.description ? `<div class="task-freq">${task.description}</div>` : ''}
+
+                        <div class="task-text">
+                            ${task.title}
+                        </div>
+
+                        <div class="task-freq">
+                            ${
+                                task.frequency === 'daily'
+                                ? '🟢 Щодня'
+                                : '🟣 Індивідуально'
+                            }
+                        </div>
+
+                        ${
+                            task.description
+                            ? `<div class="task-freq">${task.description}</div>`
+                            : ''
+                        }
+
                     </div>
                 </div>
-            `).join('') : `
-                <div class="empty-state">
-                    <p>Для цього плану ще немає завдань</p>
-                </div>
-            `}
+            `;
+        }).join('') : `
+
+        <div class="empty-state">
+            <p>Для цього плану ще немає завдань</p>
         </div>
-    `;
+`}
+    </div>
+`;
 }
 
 // ============================================================
@@ -1026,7 +1105,7 @@ function selExercise(btn, val) {
     exerciseAnswer = val;
     const container = document.getElementById('exerciseScale');
     if (container) {
-        container.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('sel'));
+       container.querySelectorAll('.exercise-btn').forEach(b => b.classList.remove('sel'));
     }
     btn.classList.add('sel');
 }
