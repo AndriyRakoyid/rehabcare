@@ -866,11 +866,11 @@ async function selectPatient(id){
   document.getElementById('detailSub').textContent  = selectedPatient.email;
 
   await Promise.all([
-    loadDetailMetrics(),
-    loadDetailNotifications(),
-    loadDetailVAS(),
-    loadDetailPlan(),
-  ]);
+  loadDetailMetrics(),
+  loadDetailNotifications(),
+  loadVASHistory(selectedPatient.id),
+  loadDetailPlan(),
+]);
 }
 
 async function loadDetailMetrics(){
@@ -1086,34 +1086,7 @@ async function markAllRead(){
 // ─────────────────────────────────────────────
 // VAS HISTORY
 // ─────────────────────────────────────────────
-async function loadDetailVAS(){
-  const { data } = await supabaseClient
-    .from('questionnaire_responses')
-    .select('total_score,answered_at')
-    .eq('patient_id', selectedPatient.id)
-    .order('answered_at', { ascending: false })
-    .limit(8);
 
-  if (!data?.length){
-    document.getElementById('vasHistory').innerHTML = '<div class="empty-state"><p>Немає відповідей</p></div>';
-    return;
-  }
-
-  // Показуємо від найстаріших до найновіших
-  const reversed = [...data].reverse();
-  document.getElementById('vasHistory').innerHTML = reversed.map(r => {
-    const score = Number(r.total_score);
-    const pct   = score * 10; // 0-10 → 0-100%
-    const color = score <= 3 ? '#1a6b4a' : score <= 6 ? '#d97706' : '#c0392b';
-    const date  = new Date(r.answered_at).toLocaleDateString('uk-UA',{day:'numeric',month:'short'});
-    return `
-      <div class="q-score-row">
-        <span class="q-date">${date}</span>
-        <div class="q-bar-wrap"><div class="q-bar" style="width:${pct}%;background:${color}"></div></div>
-        <span class="q-score-val" style="color:${color}">${score}</span>
-      </div>`;
-  }).join('');
-}
 
 // ─────────────────────────────────────────────
 // ПЛАН РЕАБІЛІТАЦІЇ
@@ -1331,6 +1304,59 @@ async function handleLogout(){
 document.querySelectorAll('.modal-overlay').forEach(overlay=>{
   overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.classList.remove('open'); });
 });
+
+async function loadVASHistory(patientId) {
+
+  const { data, error } = await supabaseClient
+    .from('vas_surveys')
+    .select('*')
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: false });
+
+  const container = document.getElementById('vasHistory');
+
+  if (error || !data || data.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>Немає відповідей</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = data.map(item => {
+
+    const pain = item.pain_level;
+
+    let color = '#22c55e';
+
+    if (pain >= 7) color = '#ef4444';
+    else if (pain >= 4) color = '#f59e0b';
+
+    const width = pain * 10;
+
+    const date = new Date(item.created_at)
+      .toLocaleDateString('uk-UA', {
+        day: 'numeric',
+        month: 'short'
+      });
+
+    return `
+      <div class="q-score-row">
+        <div class="q-date">${date}</div>
+
+        <div class="q-bar-wrap">
+          <div class="q-bar"
+               style="width:${width}%; background:${color}">
+          </div>
+        </div>
+
+        <div class="q-score-val">${pain}/10</div>
+      </div>
+    `;
+
+  }).join('');
+}
 </script>
 </body>
 </html>

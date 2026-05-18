@@ -944,7 +944,22 @@ function closeMetricModal() {
 }
 
 async function saveMetric() {
-    const type = document.getElementById('metricType').value;
+   let type = document.getElementById('metricType').value;
+console.log("TYPE =", type);
+const allowedTypes = [
+    'heart_rate',
+    'spo2',
+    'weight',
+    'blood_pressure_systolic',
+    'blood_pressure_diastolic',
+    'temperature',
+    'blood_glucose'
+];
+
+if (!allowedTypes.includes(type)) {
+    showToast('Недозволений тип показника', 'error');
+    return;
+}
     const value = parseFloat(document.getElementById('metricValue').value);
     if (isNaN(value)) {
         showToast('Введіть коректне значення', 'error');
@@ -956,7 +971,8 @@ async function saveMetric() {
     metric_type: type,
     value: value,
     unit: document.getElementById('metricUnit').value,
-    source: 'manual'
+    source: 'manual',
+    recorded_at: new Date().toISOString()
 });
     
     if (error) {
@@ -1028,27 +1044,20 @@ async function saveSurvey() {
         showToast('Оберіть виконання вправ', 'error');
         return;
     }
-    
-    // Зберігаємо відповіді в БД (спрощено - як health_metric для болю)
-    const {
-        data: { user }
-      } = await sb.auth.getUser();
-      console.log('AUTH USER:', user.id);
-      console.log('CURRENT USER:', currentUser.id);
-    
-      const { error } = await sb.from('health_metrics').insert({
-        patient_id: currentUser.id,
-        metric_type: 'pain_score',
-        value: vasScore,
-        unit: 'scale 0-10',
-        note: `Самопочуття: ${wellnessScore}/5, Вправи: ${exerciseAnswer}`,
-        source: 'questionnaire'
-    });
-    
-    if (error) {
-        showToast('Помилка збереження: ' + error.message, 'error');
-        return;
-    }
+const { error: surveyError } = await sb
+  .from('vas_surveys')
+  .insert({
+    patient_id: currentUser.id,
+    pain_level: vasScore,
+    wellness_level: wellnessScore,
+    exercise_status: exerciseAnswer
+  });
+
+if (surveyError) {
+  console.error(surveyError);
+  showToast('Помилка збереження', 'error');
+  return;
+}
     
     showToast('Відповіді збережено!', 'success');
     
